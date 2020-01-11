@@ -4,19 +4,18 @@ admin.initializeApp();
 
 exports.addMessage = functions.https.onRequest(async (req, res) => {
   const original = req.query.text;
-  const snapshot = await admin
-    .database()
-    .ref('/messages')
-    .push({ original: original });
-  res.redirect(303, snapshot.ref.toString());
+  await admin
+    .firestore()
+    .collection('messages')
+    .doc()
+    .create({ original: original });
+  res.status(200).send('success');
 });
 
-exports.makeUppercase = functions.database
-  .ref('/messages/{pushId}/original')
+exports.makeUppercase = functions.firestore
+  .document('/messages/{pushId}')
   .onCreate((snapshot, context) => {
-    const original = snapshot.val();
-    console.log('Uppercase', context.params.pushId, original);
-    const uppercase = original.toUpperCase();
-
-    return snapshot.ref.parent?.child('uppercase').set(uppercase);
+    const original = snapshot.get('original');
+    const uppercase = original === undefined ? 0 : original.toUpperCase();
+    return snapshot.ref.set({ ...snapshot.data(), uppercase });
   });
